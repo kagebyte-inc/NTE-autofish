@@ -158,8 +158,8 @@ void AppController::setReelControl(const QString &event)
 
 void AppController::setUsePidReelControl(bool enabled)
 {
-    setReelControlMode(enabled ? static_cast<int>(ReelControlMode::LegacyPid)
-                               : static_cast<int>(ReelControlMode::Boundary));
+    setReelControlMode(enabled ? static_cast<int>(ReelControlMode::Stable)
+                               : static_cast<int>(ReelControlMode::Stable));
 }
 
 void AppController::setReelControlMode(int mode)
@@ -170,12 +170,12 @@ void AppController::setReelControlMode(int mode)
         return;
     }
 
-    QString modeName = QStringLiteral("boundary");
+    QString modeName = QStringLiteral("stable");
     if (m_settings.reelControlMode() == ReelControlMode::ChizukuoPid) {
         modeName = QStringLiteral("chizukuo pid");
-    } else if (m_settings.reelControlMode() == ReelControlMode::LegacyPid) {
+    } else if (m_settings.reelControlMode() == ReelControlMode::Stable) {
         modeName = QStringLiteral("stable");
-    } else if (m_settings.reelControlMode() == ReelControlMode::KagebaitoGuard) {
+    } else if (m_settings.reelControlMode() == ReelControlMode::Experimental) {
         modeName = QStringLiteral("experimental");
     }
 

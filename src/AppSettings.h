@@ -38,10 +38,9 @@ class AppSettings final : public QObject
 
 public:
     enum class ReelControlMode {
-        Boundary = 0,
-        ChizukuoPid = 1,
-        LegacyPid = 2,
-        KagebaitoGuard = 3,
+        Experimental = 0,    // Advanced custom VSH/experimental guard logic with prediction, brake, settle (the "Experimental" controller)
+        Stable = 1,          // Simple PID + basic pulse (the "Stable" controller)
+        ChizukuoPid = 2,     // Adapted from Chizu (PID + humanized pulsing). May not perform well due to architecture differences (vision service rate, input model, detection). Kept for reference/comparison.
     };
     Q_ENUM(ReelControlMode)
 
@@ -134,7 +133,7 @@ private:
     QString m_uiLanguage = QStringLiteral("en");
     bool m_saveDebugFrames = false;
     bool m_writeLogsToFile = false;
-    ReelControlMode m_reelControlMode = ReelControlMode::KagebaitoGuard;
+    ReelControlMode m_reelControlMode = ReelControlMode::Experimental;
     int m_experimentalLeadMs = 55;
     int m_experimentalSafeMarginPercent = 20;
     int m_experimentalSettleMs = 110;

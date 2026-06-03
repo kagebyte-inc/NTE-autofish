@@ -73,10 +73,9 @@ ApplicationWindow {
     function reelModeNames() {
         void (I18n.generation)
         return [
-            Theme.t("reel.boundary"),
-            Theme.t("reel.chizukuo"),
+            Theme.t("reel.experimental"),
             Theme.t("reel.stable"),
-            Theme.t("reel.experimental")
+            Theme.t("reel.chizukuo")
         ]
     }
 

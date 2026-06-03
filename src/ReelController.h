@@ -24,6 +24,11 @@ public:
     double markerCenter() const { return m_markerCenter; }
 
 private:
+    void tickChizukuoPid();
+    void tickStable();
+    void tickExperimental();
+
+private:
     AppController *m_app = nullptr;
     FishingFlowController *m_fishing = nullptr;
     bool m_visible = false;

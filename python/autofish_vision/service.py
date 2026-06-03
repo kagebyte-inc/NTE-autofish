@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import time
 
+import base64
 import cv2
 import numpy as np
 
@@ -27,25 +28,28 @@ def load_image(path: str) -> np.ndarray:
     return frame
 
 
-def run_once(image_path: str, debug_dir: str) -> int:
+def run_once(image_path: str, debug_dir: str, live_debug: bool = False) -> int:
     detector = BiteDetector()
     analyzer = WindowElementAnalyzer(confirm_fish_hooked_frames=1)
     frame = load_image(image_path)
     motion = detector.analyze(frame).to_json_dict()
     elements = analyzer.analyze(frame)
     debug_path = save_debug_frame(frame, elements, debug_dir, "once") if debug_dir else ""
-    emit(
-        {
-            "event": "frame_analyzed",
-            "confidence": 1.0,
-            "details": {
-                "source": "image",
-                "motion": motion,
-                "elements": [item.to_json_dict() for item in elements],
-                "debug_overlay": debug_path,
-            },
-        }
-    )
+    event = {
+        "event": "frame_analyzed",
+        "confidence": 1.0,
+        "details": {
+            "source": "image",
+            "motion": motion,
+            "elements": [item.to_json_dict() for item in elements],
+            "debug_overlay": debug_path,
+        },
+    }
+    if live_debug:
+        b64 = make_live_debug_image_b64(frame, elements)
+        if b64:
+            event["debug_image"] = b64
+    emit(event)
     return 0
 
 
@@ -80,9 +84,10 @@ def run_watch(
     portal: bool,
     debug_dir: str,
     debug_every: int,
+    live_debug: bool = False,
 ) -> int:
     if portal:
-        return run_portal_watch(interval_seconds, debug_dir, debug_every)
+        return run_portal_watch(interval_seconds, debug_dir, debug_every, live_debug)
 
     detector = BiteDetector()
     analyzer = WindowElementAnalyzer()
@@ -131,23 +136,26 @@ def run_watch(
         motion = detector.analyze(frame).to_json_dict()
         elements = analyzer.analyze(frame)
         debug_path = maybe_save_debug_frame(frame, elements, debug_dir, debug_every, frame_index, "window")
-        emit(
-            {
-                "event": "window_analyzed",
-                "confidence": 1.0,
-                "details": {
-                    "window": geometry.to_json_dict() if geometry is not None else None,
-                    "motion": motion,
-                    "elements": [item.to_json_dict() for item in elements],
-                    "debug_overlay": debug_path,
-                    "frame": {"width": int(frame.shape[1]), "height": int(frame.shape[0])},
-                },
-            }
-        )
+        event = {
+            "event": "window_analyzed",
+            "confidence": 1.0,
+            "details": {
+                "window": geometry.to_json_dict() if geometry is not None else None,
+                "motion": motion,
+                "elements": [item.to_json_dict() for item in elements],
+                "debug_overlay": debug_path,
+                "frame": {"width": int(frame.shape[1]), "height": int(frame.shape[0])},
+            },
+        }
+        if live_debug:
+            b64 = make_live_debug_image_b64(frame, elements)
+            if b64:
+                event["debug_image"] = b64
+        emit(event)
         time.sleep(interval_seconds)
 
 
-def run_portal_watch(interval_seconds: float, debug_dir: str, debug_every: int) -> int:
+def run_portal_watch(interval_seconds: float, debug_dir: str, debug_every: int, live_debug: bool = False) -> int:
     detector = BiteDetector()
     analyzer = WindowElementAnalyzer()
     emit({"event": "portal_picker_opening", "confidence": 1.0, "details": {}})
@@ -180,19 +188,22 @@ def run_portal_watch(interval_seconds: float, debug_dir: str, debug_every: int) 
             motion = detector.analyze(frame).to_json_dict()
             elements = analyzer.analyze(frame)
             debug_path = maybe_save_debug_frame(frame, elements, debug_dir, debug_every, frame_index, "portal")
-            emit(
-                {
-                    "event": "portal_frame_analyzed",
-                    "confidence": 1.0,
-                    "details": {
-                        "stream": session.stream.to_json_dict(),
-                        "motion": motion,
-                        "elements": [item.to_json_dict() for item in elements],
-                        "debug_overlay": debug_path,
-                        "frame": {"width": int(frame.shape[1]), "height": int(frame.shape[0])},
-                    },
-                }
-            )
+            event = {
+                "event": "portal_frame_analyzed",
+                "confidence": 1.0,
+                "details": {
+                    "stream": session.stream.to_json_dict(),
+                    "motion": motion,
+                    "elements": [item.to_json_dict() for item in elements],
+                    "debug_overlay": debug_path,
+                    "frame": {"width": int(frame.shape[1]), "height": int(frame.shape[0])},
+                },
+            }
+            if live_debug:
+                b64 = make_live_debug_image_b64(frame, elements)
+                if b64:
+                    event["debug_image"] = b64
+            emit(event)
             time.sleep(interval_seconds)
     finally:
         session.close()
@@ -224,21 +235,7 @@ def save_debug_frame(frame: np.ndarray, elements: list, debug_dir: str, name: st
     raw_path = output_dir / f"{name}_raw.png"
     cv2.imwrite(str(raw_path), frame)
 
-    overlay = frame.copy()
-    for element in elements:
-        x, y, width, height = element.bbox
-        color = _element_color(element.name)
-        cv2.rectangle(overlay, (x, y), (x + width, y + height), color, 2)
-        cv2.putText(
-            overlay,
-            element.name,
-            (x, max(16, y - 6)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            color,
-            2,
-            cv2.LINE_AA,
-        )
+    overlay = build_debug_overlay(frame, elements)
 
     output_path = output_dir / f"{name}.png"
     cv2.imwrite(str(output_path), overlay)
@@ -267,6 +264,38 @@ def _element_color(name: str) -> tuple[int, int, int]:
     return colors.get(name, (180, 180, 180))
 
 
+def build_debug_overlay(frame: np.ndarray, elements: list) -> np.ndarray:
+    overlay = frame.copy()
+    for element in elements:
+        x, y, width, height = element.bbox
+        color = _element_color(element.name)
+        cv2.rectangle(overlay, (x, y), (x + width, y + height), color, 2)
+        cv2.putText(
+            overlay,
+            element.name,
+            (x, max(16, y - 6)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            color,
+            1,
+            cv2.LINE_AA,
+        )
+    return overlay
+
+
+def make_live_debug_image_b64(frame: np.ndarray, elements: list, max_width: int = 320) -> str:
+    overlay = build_debug_overlay(frame, elements)
+    h, w = overlay.shape[:2]
+    if w > max_width:
+        scale = max_width / float(w)
+        new_h = int(h * scale)
+        overlay = cv2.resize(overlay, (max_width, new_h), interpolation=cv2.INTER_AREA)
+    success, buf = cv2.imencode(".png", overlay)
+    if success:
+        return base64.b64encode(buf.tobytes()).decode("ascii")
+    return ""
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -283,6 +312,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--portal", action="store_true", help="Use xdg-desktop-portal ScreenCast picker.")
     parser.add_argument("--debug-dir", default="", help="Write frames with detector overlays to this directory.")
     parser.add_argument("--debug-every", type=int, default=5, help="Save every Nth analyzed frame when --debug-dir is set.")
+    parser.add_argument("--live-debug", action="store_true", help="Include small base64 debug image in JSON events for live UI preview.")
     return parser.parse_args(argv)
 
 
@@ -295,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.once:
         if not args.image:
             raise SystemExit("--image is required with --once")
-        return run_once(args.image, args.debug_dir)
+        return run_once(args.image, args.debug_dir, getattr(args, "live_debug", False))
 
     if args.press_key:
         return run_press_key(args.key)
@@ -308,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
         args.portal,
         args.debug_dir,
         args.debug_every,
+        getattr(args, "live_debug", False),
     )
 
 

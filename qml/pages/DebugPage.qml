@@ -68,5 +68,27 @@ GlassCard {
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
+
+        SectionTitle {
+            visible: AppController.debugMode && AppController.debugOverlaySource.length > 0
+            text: "Live OpenCV zones / debug overlay (for tuning detect)"
+            Layout.fillWidth: true
+        }
+
+        Image {
+            visible: AppController.debugMode && AppController.debugOverlaySource.length > 0
+            source: AppController.debugOverlaySource
+            Layout.preferredWidth: 400
+            Layout.preferredHeight: 225
+            fillMode: Image.PreserveAspectFit
+            cache: false
+            smooth: true
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.color: Theme.accent
+                border.width: 1
+            }
+        }
     }
 }

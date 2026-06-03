@@ -11,7 +11,7 @@ AppSettings::AppSettings(QObject *parent)
 
 void AppSettings::load()
 {
-    QSettings settings(QStringLiteral("kagebaito"), QStringLiteral("autofish"));
+    QSettings settings(QStringLiteral("nte-autofish"), QStringLiteral("autofish"));
     const QString systemLocale = QLocale::system().name();
     QString defaultLanguage = QStringLiteral("en");
     if (systemLocale.startsWith(QStringLiteral("ru"))) {
@@ -39,9 +39,9 @@ void AppSettings::load()
     m_saveDebugFrames = settings.value(QStringLiteral("ui/saveDebugFrames"), false).toBool();
     m_writeLogsToFile = settings.value(QStringLiteral("ui/writeLogsToFile"), false).toBool();
     m_reelControlMode = static_cast<ReelControlMode>(
-        qBound(static_cast<int>(ReelControlMode::Boundary),
-               settings.value(QStringLiteral("ui/reelControlMode"), static_cast<int>(ReelControlMode::KagebaitoGuard)).toInt(),
-               static_cast<int>(ReelControlMode::KagebaitoGuard)));
+        qBound(static_cast<int>(ReelControlMode::Experimental),
+               settings.value(QStringLiteral("ui/reelControlMode"), static_cast<int>(ReelControlMode::Experimental)).toInt(),
+               static_cast<int>(ReelControlMode::ChizukuoPid)));
     m_experimentalLeadMs = qBound(0, settings.value(QStringLiteral("ui/experimentalLeadMs"), 55).toInt(), 140);
     m_experimentalSafeMarginPercent = qBound(5, settings.value(QStringLiteral("ui/experimentalSafeMarginPercent"), 20).toInt(), 40);
     m_experimentalSettleMs = qBound(0, settings.value(QStringLiteral("ui/experimentalSettleMs"), 110).toInt(), 250);
@@ -65,7 +65,7 @@ void AppSettings::load()
 
 void AppSettings::save(const QString &key, const QVariant &value)
 {
-    QSettings settings(QStringLiteral("kagebaito"), QStringLiteral("autofish"));
+    QSettings settings(QStringLiteral("nte-autofish"), QStringLiteral("autofish"));
     settings.setValue(QStringLiteral("ui/%1").arg(key), value);
 }
 
@@ -153,9 +153,9 @@ AppSettings::ReelControlMode AppSettings::reelControlMode() const { return m_ree
 int AppSettings::reelControlModeInt() const { return static_cast<int>(m_reelControlMode); }
 void AppSettings::setReelControlModeInt(int mode)
 {
-    setReelControlMode(static_cast<ReelControlMode>(qBound(static_cast<int>(ReelControlMode::Boundary),
+    setReelControlMode(static_cast<ReelControlMode>(qBound(static_cast<int>(ReelControlMode::Experimental),
                                                            mode,
-                                                           static_cast<int>(ReelControlMode::KagebaitoGuard))));
+                                                           static_cast<int>(ReelControlMode::ChizukuoPid))));
 }
 void AppSettings::setReelControlMode(ReelControlMode mode)
 {

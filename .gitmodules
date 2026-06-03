@@ -1,0 +1,3 @@
+[submodule "upstream/NTE-auto-fish"]
+	path = upstream/NTE-auto-fish
+	url = git@github.com:Chizukuo/NTE-auto-fish.git

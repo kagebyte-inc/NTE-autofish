@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QVariant>
 #include <QVariantList>
+#include <QImage>
 
 class AppController final : public QObject
 {
@@ -60,6 +61,7 @@ class AppController final : public QObject
     Q_PROPERTY(QString uiLanguage READ uiLanguage WRITE setUiLanguage NOTIFY uiLanguageChanged)
     Q_PROPERTY(bool inputReady READ inputReady NOTIFY inputReadyChanged)
     Q_PROPERTY(QString captureFrameSize READ captureFrameSize NOTIFY captureFrameSizeChanged)
+    Q_PROPERTY(QString debugOverlaySource READ debugOverlaySource NOTIFY debugOverlaySourceChanged)
 
 public:
     using ReelControlMode = AppSettings::ReelControlMode;
@@ -159,6 +161,9 @@ public:
     bool inputReady() const;
     QString captureFrameSize() const;
 
+    QString debugOverlaySource() const;
+    void updateDebugOverlay(const QImage &img);
+
     QString repoRoot() const;
     QString pythonExecutable() const;
     QProcessEnvironment pythonEnvironment() const;
@@ -202,6 +207,7 @@ signals:
     void uiLanguageChanged();
     void inputReadyChanged();
     void captureFrameSizeChanged();
+    void debugOverlaySourceChanged();
     void windowPickerRequired();
 
 private slots:
@@ -224,6 +230,10 @@ private:
     bool m_inputReady = false;
     int m_captureFrameWidth = 0;
     int m_captureFrameHeight = 0;
+
+    QImage m_debugOverlayImage;
+    QString m_debugOverlaySource;
+    int m_debugOverlayVersion = 0;
 
     AppSettings m_settings;
     InputDevice m_input;

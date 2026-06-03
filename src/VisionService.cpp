@@ -162,9 +162,12 @@ void VisionService::startPortal()
 
     QStringList arguments = {QStringLiteral("-m"), QStringLiteral("autofish_vision.service"),
                              QStringLiteral("--watch"), QStringLiteral("--portal")};
-    if (m_controller->settings()->saveDebugFrames()) {
+    if (m_controller->settings()->saveDebugFrames() || m_controller->settings()->debugMode()) {
         arguments << QStringLiteral("--debug-dir") << QStringLiteral("debug")
                   << QStringLiteral("--debug-every") << QStringLiteral("30");
+    }
+    if (m_controller->settings()->debugMode()) {
+        arguments << QStringLiteral("--live-debug");
     }
     arguments << QStringLiteral("--interval") << QStringLiteral("0.005");
 
@@ -231,9 +234,12 @@ QStringList VisionService::watchArguments() const
     if (!windowId.isEmpty()) {
         arguments << QStringLiteral("--window-id") << windowId;
     }
-    if (m_controller->settings()->saveDebugFrames()) {
+    if (m_controller->settings()->saveDebugFrames() || m_controller->settings()->debugMode()) {
         arguments << QStringLiteral("--debug-dir") << QStringLiteral("debug")
                   << QStringLiteral("--debug-every") << QStringLiteral("30");
+    }
+    if (m_controller->settings()->debugMode()) {
+        arguments << QStringLiteral("--live-debug");
     }
     arguments << QStringLiteral("--interval") << QStringLiteral("0.005");
     return arguments;

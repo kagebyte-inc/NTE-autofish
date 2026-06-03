@@ -23,6 +23,9 @@ qt_add_executable(autofish
     src/FishingFlowController.h
     src/ReelController.cpp
     src/ReelController.h
+    src/ReelChizukuo.cpp
+    src/ReelStable.cpp
+    src/ReelExperimental.cpp
     src/AppSettings.cpp
     src/AppSettings.h
     src/I18nCatalog.cpp
@@ -64,14 +67,20 @@ qt_add_qml_module(autofish
     RESOURCES
         qml/assets/icons/all_reset.png
         qml/assets/icons/autofish-icon.png
+        qml/assets/icons/capt_mode.png
         qml/assets/icons/debug.png
         qml/assets/icons/exp_reset.png
         qml/assets/icons/ez.png
+        qml/assets/icons/fishing.png
+        qml/assets/icons/health.png
         qml/assets/icons/home.png
         qml/assets/icons/info.png
+        qml/assets/icons/labs.png
         qml/assets/icons/lang.png
+        qml/assets/icons/ml.png
         qml/assets/icons/pro.png
         qml/assets/icons/settings.png
+        qml/assets/icons/timer.png
         qml/assets/icons/wayland.png
         qml/assets/icons/windows.png
         qml/assets/icons/x11.png

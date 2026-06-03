@@ -12,6 +12,10 @@
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QProcessEnvironment>
+#include <QImage>
+#include <QFile>
+#include <QDir>
+#include <QStandardPaths>
 
 AppController::AppController(QObject *parent)
     : QObject(parent)
@@ -80,7 +84,7 @@ QString AppController::reelControl() const { return m_reelControl; }
 
 bool AppController::usePidReelControl() const
 {
-    return m_settings.reelControlMode() == ReelControlMode::LegacyPid;
+    return m_settings.reelControlMode() == ReelControlMode::Stable;
 }
 
 int AppController::reelControlMode() const { return m_settings.reelControlModeInt(); }
@@ -232,15 +236,21 @@ void AppController::prepareVisionSession()
 void AppController::handleVisionLine(const QString &line, bool &frameGeometryChecked)
 {
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
-    if (m_settings.debugMode() && now - m_lastRawEventUiMs >= 1000) {
-        appendRawEvent(line);
-        m_lastRawEventUiMs = now;
-    }
-
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(line.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        if (m_settings.debugMode() && now - m_lastRawEventUiMs >= 1000) {
+            appendRawEvent(line);
+            m_lastRawEventUiMs = now;
+        }
         return;
+    }
+
+    if (m_settings.debugMode() && now - m_lastRawEventUiMs >= 1000) {
+        QJsonObject clean = document.object();
+        clean.remove("debug_image");  // don't spam raw log with large b64
+        appendRawEvent(QJsonDocument(clean).toJson(QJsonDocument::Compact));
+        m_lastRawEventUiMs = now;
     }
 
     const QJsonObject root = document.object();
@@ -278,6 +288,17 @@ void AppController::handleVisionLine(const QString &line, bool &frameGeometryChe
     }
     m_fishing.inspectFishingEvent(root);
     m_reel.ingestFrame(root);
+
+    if (root.contains(QStringLiteral("debug_image"))) {
+        const QString b64 = root.value(QStringLiteral("debug_image")).toString();
+        if (!b64.isEmpty()) {
+            const QByteArray data = QByteArray::fromBase64(b64.toUtf8());
+            QImage img;
+            if (img.loadFromData(data, "PNG")) {
+                updateDebugOverlay(img);
+            }
+        }
+    }
 }
 
 void AppController::onVisionStopped(int exitCode)
@@ -304,15 +325,12 @@ void AppController::notifyReelDirectionChanged(int direction)
     m_lastReelControlUiMs = now;
 
     const QString key = direction < 0 ? QStringLiteral("A") : direction > 0 ? QStringLiteral("D") : QStringLiteral("none");
-    QString mode = QStringLiteral("boundary");
-    QString action = QStringLiteral("hold");
+    QString mode = QStringLiteral("stable");
+    QString action = QStringLiteral("pulse");
     if (m_settings.reelControlMode() == ReelControlMode::ChizukuoPid) {
         mode = QStringLiteral("chizukuo pid");
         action = QStringLiteral("pulse");
-    } else if (m_settings.reelControlMode() == ReelControlMode::LegacyPid) {
-        mode = QStringLiteral("stable");
-        action = QStringLiteral("pulse");
-    } else if (m_settings.reelControlMode() == ReelControlMode::KagebaitoGuard) {
+    } else if (m_settings.reelControlMode() == ReelControlMode::Experimental) {
         mode = QStringLiteral("experimental");
         action = QStringLiteral("guard");
     }
@@ -405,5 +423,21 @@ void AppController::onInputFinished(int exitCode, QProcess::ExitStatus exitStatu
     }
     if (exitCode != 0) {
         setLastEvent(QStringLiteral("Input sender exited with code %1").arg(exitCode));
+    }
+}
+
+QString AppController::debugOverlaySource() const { return m_debugOverlaySource; }
+
+void AppController::updateDebugOverlay(const QImage &img)
+{
+    if (img.isNull()) return;
+    m_debugOverlayImage = img;
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QDir().mkpath(dir);
+    const QString path = dir + "/autofish_debug_overlay.png";
+    if (img.save(path)) {
+        m_debugOverlayVersion++;
+        m_debugOverlaySource = QStringLiteral("file://%1?ts=%2").arg(path).arg(m_debugOverlayVersion);
+        emit debugOverlaySourceChanged();
     }
 }

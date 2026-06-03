@@ -25,14 +25,25 @@ Item {
         return ""
     }
 
+    function sectionIcon(key) {
+        switch (key) {
+        case "general": return Theme.icon("health.png")
+        case "capture": return Theme.icon("capt_mode.png")
+        case "fishing": return Theme.icon("fishing.png")
+        case "reel": return Theme.icon("ml.png")
+        case "advanced": return Theme.icon("labs.png")
+        }
+        return ""
+    }
+
     function selectReelMode(mode) {
         if (AppController.reelControlMode === mode) {
             return
         }
         AppController.reelControlMode = mode
-        if (mode === 1) {
+        if (mode === 2) {
             shell.openChizukuoPidDialog()
-        } else if (mode === 3) {
+        } else if (mode === 0) {
             shell.openExperimentalDialog()
         }
     }
@@ -57,6 +68,7 @@ Item {
                     SettingsNavItem {
                         Layout.fillWidth: true
                         text: root.sectionTitle(modelData)
+                        iconSource: root.sectionIcon(modelData)
                         selected: root.sectionIndex === index
                         onActivated: root.sectionIndex = index
                     }
@@ -75,9 +87,21 @@ Item {
                 anchors.margins: 14
                 spacing: 10
 
-                SectionTitle {
-                    text: root.sectionTitle(root.sectionKeys[root.sectionIndex])
+                RowLayout {
                     Layout.fillWidth: true
+                    spacing: 8
+                    Image {
+                        visible: root.sectionIcon(root.sectionKeys[root.sectionIndex]) != ""
+                        source: root.sectionIcon(root.sectionKeys[root.sectionIndex])
+                        Layout.preferredWidth: 20
+                        Layout.preferredHeight: 20
+                        fillMode: Image.PreserveAspectFit
+                        opacity: 0.9
+                    }
+                    SectionTitle {
+                        text: root.sectionTitle(root.sectionKeys[root.sectionIndex])
+                        Layout.fillWidth: true
+                    }
                 }
 
                 ScrollView {
@@ -358,7 +382,7 @@ Item {
                             }
 
                             GlassCard {
-                                visible: AppController.reelControlMode === 3
+                                visible: AppController.reelControlMode === 0
                                 Layout.fillWidth: true
                                 implicitHeight: experimentalTuningLayout.implicitHeight + 20
                                 color: Theme.logBg
