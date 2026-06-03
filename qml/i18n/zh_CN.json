@@ -1,9 +1,9 @@
 {
-  "app.title": "NSE 自动钓鱼 NXXT",
+  "app.title": "NTE 自动钓鱼 NXXT",
   "menu.file": "文件",
   "menu.exit": "退出",
   "menu.about": "关于",
-  "menu.aboutApp": "关于 NSE 自动钓鱼 NXXT v.%1",
+  "menu.aboutApp": "关于 NTE 自动钓鱼 NXXT v.%1",
   "menu.aboutQt": "关于 Qt",
   "ok": "确定",
   "cancel": "取消",

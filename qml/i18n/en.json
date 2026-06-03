@@ -1,9 +1,9 @@
 {
-  "app.title": "NSE Autofish NXXT",
+  "app.title": "NTE Autofish NXXT",
   "menu.file": "File",
   "menu.exit": "Exit",
   "menu.about": "About",
-  "menu.aboutApp": "About NSE Autofish NXXT v.%1",
+  "menu.aboutApp": "About NTE Autofish NXXT v.%1",
   "menu.aboutQt": "About Qt",
   "ok": "OK",
   "cancel": "Cancel",

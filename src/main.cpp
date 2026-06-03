@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle("Fusion");
 
     QApplication app(argc, argv);
-    QCoreApplication::setApplicationName(QStringLiteral("NSE Autofish NXXT"));
+    QCoreApplication::setApplicationName(QStringLiteral("NTE Autofish NXXT"));
 #ifdef AUTOFISH_VERSION
     QCoreApplication::setApplicationVersion(QStringLiteral(AUTOFISH_VERSION));
 #endif
@@ -26,11 +26,11 @@ int main(int argc, char *argv[])
     }
     QDir().mkpath(lockDir);
 
-    QLockFile lockFile(QDir(lockDir).filePath(QStringLiteral("nse-autofish-nxxt.lock")));
+    QLockFile lockFile(QDir(lockDir).filePath(QStringLiteral("nte-autofish-nxxt.lock")));
     if (!lockFile.tryLock(100)) {
         QMessageBox::information(nullptr,
-                                 QStringLiteral("NSE Autofish NXXT"),
-                                 QStringLiteral("NSE Autofish NXXT is already running."));
+                                 QStringLiteral("NTE Autofish NXXT"),
+                                 QStringLiteral("NTE Autofish NXXT is already running."));
         return 0;
     }
 

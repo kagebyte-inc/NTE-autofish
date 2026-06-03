@@ -1,9 +1,9 @@
 {
-  "app.title": "NSE Autofish NXXT",
+  "app.title": "NTE Autofish NXXT",
   "menu.file": "Файл",
   "menu.exit": "Выход",
   "menu.about": "О программе",
-  "menu.aboutApp": "О NSE Autofish NXXT v.%1",
+  "menu.aboutApp": "О NTE Autofish NXXT v.%1",
   "menu.aboutQt": "О Qt",
   "ok": "OK",
   "cancel": "Отмена",
