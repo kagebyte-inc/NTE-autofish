@@ -1,5 +1,8 @@
 # Autofish
 
+[![CI / Build](https://github.com/kagebyte-inc/NTE-autofish/actions/workflows/ci.yml/badge.svg)](https://github.com/kagebyte-inc/NTE-autofish/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/kagebyte-inc/NTE-autofish?label=release)](https://github.com/kagebyte-inc/NTE-autofish/releases/latest)
+
 Desktop automation prototype for game fishing workflows.
 
 ## Stack
@@ -24,6 +27,46 @@ cmake -S . -B build
 cmake --build build
 ./build/autofish
 ```
+
+## Prebuilt releases (GitHub Actions)
+
+Linux x86_64 builds are produced automatically by GitHub Actions on every push/PR and on every `v*` tag.
+
+- Artifacts from CI runs are available on the [Actions tab](https://github.com/kagebyte-inc/NTE-autofish/actions).
+- On tag push (e.g. `git tag v0.2.2 && git push origin v0.2.2`), a full release is created with a tarball attached. See [Releases](https://github.com/kagebyte-inc/NTE-autofish/releases).
+
+The release tarball layout matches the `build/dist/` staging:
+
+- `autofish` — statically-linked? no, dynamically linked Qt6 binary (requires Qt6 runtime on the target system)
+- `python/autofish_vision/` + `requirements.txt`
+
+### Using a prebuilt release
+
+```sh
+# extract
+mkdir -p ~/opt/nte-autofish
+cd ~/opt/nte-autofish
+tar -xzf ~/Downloads/NTE-autofish-vX.Y.Z-linux-x86_64.tar.gz
+
+# one-time Python deps setup (recommended: isolated venv)
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+deactivate
+
+# run (the app will prefer the adjacent .venv for the vision service)
+./autofish
+```
+
+If you already have the required packages globally available for your `python3`, you can skip the venv step — the binary falls back to `python3` from PATH (with `PYTHONPATH` set to include the local `python/`).
+
+**Runtime dependencies on Linux (for prebuilts):** Qt 6 (base + declarative + wayland), libxkbcommon, OpenGL libs. Example on Ubuntu:
+
+```sh
+sudo apt install qt6-base qt6-declarative qt6-wayland libxkbcommon0 libgl1-mesa-glx
+```
+
+See the pipeline definition in [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Run vision service
 
