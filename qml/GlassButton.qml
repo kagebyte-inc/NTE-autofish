@@ -18,6 +18,9 @@ Button {
     property color warningHoverColor: "#fbbf24"
     property color warningDownColor: "#d97706"
     property color textColor: "#f8fafc"
+    property url iconSource: ""
+    property int iconSize: 22
+    property string tooltipText: text
 
     readonly property color baseColor: variant === "primary" ? primaryColor :
                                        variant === "danger" ? dangerColor :
@@ -29,20 +32,39 @@ Button {
                                        variant === "danger" ? dangerDownColor :
                                        variant === "warning" ? warningDownColor : neutralDownColor
 
-    implicitWidth: 116
+    implicitWidth: iconSource == "" ? 116 : 42
     implicitHeight: 34
     leftPadding: 14
     rightPadding: 14
     hoverEnabled: true
 
-    contentItem: Text {
-        text: control.text
-        color: control.enabled ? control.textColor : "#94a3b8"
-        font.pixelSize: 14
-        font.bold: true
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
+    contentItem: Item {
+        implicitWidth: control.iconSource == "" ? label.implicitWidth : control.iconSize
+        implicitHeight: Math.max(label.implicitHeight, icon.implicitHeight)
+
+        Text {
+            id: label
+            anchors.fill: parent
+            visible: control.iconSource == ""
+            text: control.text
+            color: control.enabled ? control.textColor : "#94a3b8"
+            font.pixelSize: 14
+            font.bold: true
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
+
+        Image {
+            id: icon
+            anchors.centerIn: parent
+            visible: control.iconSource != ""
+            source: control.iconSource
+            width: control.iconSize
+            height: control.iconSize
+            fillMode: Image.PreserveAspectFit
+            opacity: control.enabled ? 1.0 : 0.45
+        }
     }
 
     background: Rectangle {
@@ -57,4 +79,8 @@ Button {
     HoverHandler {
         cursorShape: Qt.PointingHandCursor
     }
+
+    ToolTip.visible: hovered && tooltipText.length > 0
+    ToolTip.delay: 450
+    ToolTip.text: tooltipText
 }

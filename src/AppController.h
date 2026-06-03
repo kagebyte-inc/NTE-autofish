@@ -1,5 +1,11 @@
 #pragma once
 
+#include "AppSettings.h"
+#include "FishingFlowController.h"
+#include "InputDevice.h"
+#include "ReelController.h"
+#include "VisionService.h"
+
 #include <QObject>
 #include <QProcess>
 #include <QList>
@@ -32,16 +38,41 @@ class AppController final : public QObject
     Q_PROPERTY(int experimentalBrakeMs READ experimentalBrakeMs WRITE setExperimentalBrakeMs NOTIFY experimentalTuningChanged)
     Q_PROPERTY(int experimentalMaxPulseMs READ experimentalMaxPulseMs WRITE setExperimentalMaxPulseMs NOTIFY experimentalTuningChanged)
     Q_PROPERTY(int experimentalMinGapMs READ experimentalMinGapMs WRITE setExperimentalMinGapMs NOTIFY experimentalTuningChanged)
+    Q_PROPERTY(int fishingHookDelayMs READ fishingHookDelayMs WRITE setFishingHookDelayMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingHookJitterMs READ fishingHookJitterMs WRITE setFishingHookJitterMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingEventResetMs READ fishingEventResetMs WRITE setFishingEventResetMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingResultEscBaseMs READ fishingResultEscBaseMs WRITE setFishingResultEscBaseMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingResultEscJitterMs READ fishingResultEscJitterMs WRITE setFishingResultEscJitterMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingRecastBaseMs READ fishingRecastBaseMs WRITE setFishingRecastBaseMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingRecastJitterMs READ fishingRecastJitterMs WRITE setFishingRecastJitterMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingAwaitingReelMs READ fishingAwaitingReelMs WRITE setFishingAwaitingReelMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingReelLostMs READ fishingReelLostMs WRITE setFishingReelLostMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingHookRetryMs READ fishingHookRetryMs WRITE setFishingHookRetryMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingHookVisibleGraceMs READ fishingHookVisibleGraceMs WRITE setFishingHookVisibleGraceMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingRecoveryBaseMs READ fishingRecoveryBaseMs WRITE setFishingRecoveryBaseMs NOTIFY fishingTuningChanged)
+    Q_PROPERTY(int fishingRecoveryJitterMs READ fishingRecoveryJitterMs WRITE setFishingRecoveryJitterMs NOTIFY fishingTuningChanged)
     Q_PROPERTY(QVariantList windows READ windows NOTIFY windowsChanged)
     Q_PROPERTY(int selectedWindowIndex READ selectedWindowIndex NOTIFY selectedWindowChanged)
     Q_PROPERTY(QString selectedWindowLabel READ selectedWindowLabel NOTIFY selectedWindowChanged)
     Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)
+    Q_PROPERTY(bool windowsSetupAvailable READ windowsSetupAvailable CONSTANT)
     Q_PROPERTY(QString uiLanguage READ uiLanguage WRITE setUiLanguage NOTIFY uiLanguageChanged)
+    Q_PROPERTY(bool inputReady READ inputReady NOTIFY inputReadyChanged)
+    Q_PROPERTY(QString captureFrameSize READ captureFrameSize NOTIFY captureFrameSizeChanged)
 
 public:
+    using ReelControlMode = AppSettings::ReelControlMode;
+
     explicit AppController(QObject *parent = nullptr);
     ~AppController() override;
+
+    AppSettings *settings();
+    const AppSettings *settings() const;
+    InputDevice *input();
+    VisionService *vision();
+    FishingFlowController *fishing();
+    ReelController *reel();
 
     QString status() const;
     QString lastEvent() const;
@@ -76,25 +107,78 @@ public:
     void setExperimentalMaxPulseMs(int value);
     int experimentalMinGapMs() const;
     void setExperimentalMinGapMs(int value);
+    int fishingHookDelayMs() const;
+    void setFishingHookDelayMs(int value);
+    int fishingHookJitterMs() const;
+    void setFishingHookJitterMs(int value);
+    int fishingEventResetMs() const;
+    void setFishingEventResetMs(int value);
+    int fishingResultEscBaseMs() const;
+    void setFishingResultEscBaseMs(int value);
+    int fishingResultEscJitterMs() const;
+    void setFishingResultEscJitterMs(int value);
+    int fishingRecastBaseMs() const;
+    void setFishingRecastBaseMs(int value);
+    int fishingRecastJitterMs() const;
+    void setFishingRecastJitterMs(int value);
+    int fishingAwaitingReelMs() const;
+    void setFishingAwaitingReelMs(int value);
+    int fishingReelLostMs() const;
+    void setFishingReelLostMs(int value);
+    int fishingHookRetryMs() const;
+    void setFishingHookRetryMs(int value);
+    int fishingHookVisibleGraceMs() const;
+    void setFishingHookVisibleGraceMs(int value);
+    int fishingRecoveryBaseMs() const;
+    void setFishingRecoveryBaseMs(int value);
+    int fishingRecoveryJitterMs() const;
+    void setFishingRecoveryJitterMs(int value);
     QVariantList windows() const;
     int selectedWindowIndex() const;
     QString selectedWindowLabel() const;
     QString appVersion() const;
     QString qtVersion() const;
+    bool windowsSetupAvailable() const;
     QString uiLanguage() const;
     void setUiLanguage(const QString &language);
 
     Q_INVOKABLE void refreshWindows();
     Q_INVOKABLE void selectWindow(int index);
+    Q_INVOKABLE void startCapture();
     Q_INVOKABLE void startVision();
     Q_INVOKABLE void startPortalVision();
     Q_INVOKABLE void stopVision();
-    Q_INVOKABLE void simulateBite();
-    Q_INVOKABLE void simulateResultScreen();
     Q_INVOKABLE void completeSetup(const QString &platform, const QString &captureBackend);
     Q_INVOKABLE void resetSetup();
     Q_INVOKABLE void resetExperimentalTuning();
+    Q_INVOKABLE void resetFishingTuning();
+    Q_INVOKABLE void updateCaptureSetup(const QString &platform, const QString &captureBackend);
+    Q_INVOKABLE void refreshDiagnostics();
     Q_INVOKABLE void showAboutQt();
+
+    bool inputReady() const;
+    QString captureFrameSize() const;
+
+    QString repoRoot() const;
+    QString pythonExecutable() const;
+    QProcessEnvironment pythonEnvironment() const;
+
+    void prepareVisionSession();
+    void handleVisionLine(const QString &line, bool &frameGeometryChecked);
+    void onVisionStopped(int exitCode);
+    void notifyReelDirectionChanged(int direction);
+
+    void setStatus(const QString &status);
+    void setLastEvent(const QString &event);
+    void appendRawEvent(const QString &event);
+    void appendLineToLogFile(const QString &fileName, const QString &line);
+    void setFishingEvent(const QString &event);
+    void appendFishingLog(const QString &event);
+    void setReelControl(const QString &event);
+    bool ensureUinput();
+    void setReelDirection(int direction);
+    void sendKeyTap(int keyCode);
+    void resetReelControllerState();
 
 signals:
     void statusChanged();
@@ -112,154 +196,40 @@ signals:
     void experienceModeChanged();
     void debugModeChanged();
     void experimentalTuningChanged();
+    void fishingTuningChanged();
     void windowsChanged();
     void selectedWindowChanged();
     void uiLanguageChanged();
+    void inputReadyChanged();
+    void captureFrameSizeChanged();
+    void windowPickerRequired();
 
 private slots:
-    void onVisionOutput();
-    void onVisionErrorOutput();
-    void onVisionFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void onInputOutput();
     void onInputErrorOutput();
     void onInputFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void updateReelControl();
-    void sendHookAction();
-    void sendRecastAction();
-    void sendResultCloseAction();
-    void sendManualResultScreenAction();
-    void resetFishingEvent();
-
 private:
-    enum class FishingFlowState {
-        Waiting,
-        HookScheduled,
-        AwaitingReel,
-        Reeling,
-        ResultClosing,
-        Recasting,
-    };
-
-    enum class ReelControlMode {
-        Boundary = 0,
-        ChizukuoPid = 1,
-        LegacyPid = 2,
-        KagebaitoGuard = 3,
-    };
-
-    void setStatus(const QString &status);
-    void setLastEvent(const QString &event);
-    void appendRawEvent(const QString &event);
-    void appendLineToLogFile(const QString &fileName, const QString &line);
-    void setFishingEvent(const QString &event);
-    void appendFishingLog(const QString &event);
-    void setReelControl(const QString &event);
-    void loadUiSettings();
-    void saveUiSetting(const QString &key, const QVariant &value);
-    void handleVisionLine(const QString &line);
-    bool inspectFrameGeometry(const QJsonObject &root);
-    void triggerResultScreenFlow(const QString &source);
-    bool inspectResultScreen(const QJsonObject &root);
-    void inspectFishingEvent(const QJsonObject &root);
-    void inspectReelControl(const QJsonObject &root);
-    void scheduleHookAction();
-    void transitionFishingFlowState(FishingFlowState state, const QString &reason = {});
-    void updateFishingFlowWatchdog();
-    void retryHookActionOrCleanup();
-    void scheduleFOnlyRecovery(const QString &source);
-    void resetReelControllerState();
-    bool ensureUinput();
-    void destroyUinput();
-    void sendKeyTap(int keyCode);
-    void setKeyDown(int keyCode, bool down);
-    void sendUinputEvent(unsigned short type, unsigned short code, int value);
-    void setReelDirection(int direction);
-    QString repoRoot() const;
-    QString pythonExecutable() const;
-    QProcessEnvironment pythonEnvironment() const;
-
     QString m_status = QStringLiteral("idle");
     QString m_lastEvent = QStringLiteral("No events yet");
-    QString m_rawEvents = QStringLiteral("No raw vision events yet");
+    QString m_rawEvents;
     QStringList m_rawEventLines;
-    QString m_fishingEvent = QStringLiteral("No fishing events yet");
-    QString m_fishingLog = QStringLiteral("No fishing decisions yet");
+    QString m_fishingEvent;
+    QString m_fishingLog;
     QStringList m_fishingLogLines;
     QString m_reelControl = QStringLiteral("No reel control yet");
-    QString m_stdoutBuffer;
     QString m_inputStdoutBuffer;
-    QVariantList m_windows;
-    int m_selectedWindowIndex = -1;
-    bool m_fishHookedLatched = false;
-    int m_fishHookedAbsentFrames = 0;
-    int m_hookBlueTriggerFrames = 0;
-    bool m_resultScreenLatched = false;
-    int m_resultScreenAbsentFrames = 0;
-    FishingFlowState m_fishingFlowState = FishingFlowState::Waiting;
-    ReelControlMode m_reelControlMode = ReelControlMode::LegacyPid;
-    bool m_saveDebugFrames = false;
-    bool m_writeLogsToFile = false;
-    bool m_setupComplete = false;
-    QString m_platform = QStringLiteral("Wayland");
-    QString m_captureBackend = QStringLiteral("PipeWire Portal");
-    QString m_experienceMode = QStringLiteral("EZ");
-    bool m_debugMode = false;
-    QString m_uiLanguage = QStringLiteral("en");
-    int m_experimentalLeadMs = 55;
-    int m_experimentalSafeMarginPercent = 20;
-    int m_experimentalSettleMs = 110;
-    int m_experimentalBrakeMs = 85;
-    int m_experimentalMaxPulseMs = 115;
-    int m_experimentalMinGapMs = 4;
-    bool m_reelControlVisible = false;
-    double m_reelTargetCenter = 0.0;
-    double m_reelTargetLeft = 0.0;
-    double m_reelTargetRight = 0.0;
-    double m_reelMarkerCenter = 0.0;
-    double m_reelTargetVelocity = 0.0;
-    double m_reelMarkerVelocity = 0.0;
-    double m_previousReelTargetCenter = 0.0;
-    double m_previousReelMarkerCenter = 0.0;
-    int m_reelFrameWidth = 0;
-    qint64 m_lastReelObservationMs = 0;
-    qint64 m_previousReelObservationMs = 0;
-    qint64 m_lastVisionEventUiMs = 0;
+
     qint64 m_lastRawEventUiMs = 0;
-    qint64 m_lastIgnoredResultLogMs = 0;
     qint64 m_lastReelControlUiMs = 0;
-    qint64 m_fishingFlowStateEnteredMs = 0;
-    qint64 m_lastHookSeenMs = 0;
-    qint64 m_lastHookFiredMs = 0;
-    qint64 m_lastReelSeenMs = 0;
-    int m_hookRetryCount = 0;
-    bool m_frameGeometryChecked = false;
-    qint64 m_reelPulseEndMs = 0;
-    qint64 m_nextReelPulseMs = 0;
-    qint64 m_reelGuardSettleUntilMs = 0;
-    qint64 m_lastReelPidMs = 0;
-    double m_reelPidIntegral = 0.0;
-    double m_reelPidPreviousMarker = 0.0;
-    double m_reelPidDFiltered = 0.0;
-    bool m_reelPidFirst = true;
-    int m_reelPidLastSign = 0;
-    QList<qint64> m_reelPidSignChangeMs;
-    double m_reelPidAdaptiveKpScale = 1.0;
-    qint64 m_reelReactionEndMs = 0;
-    qint64 m_reelHumPulseEndMs = 0;
-    int m_reelHumPulseState = 0;
-    int m_reelHumTargetDirection = 0;
-    int m_reelLastAction = 0;
-    int m_reelDirection = 0;
-    int m_reelPulseDirection = 0;
-    int m_uinputFd = -1;
-    bool m_keyADown = false;
-    bool m_keyDDown = false;
-    QProcess m_visionProcess;
+    bool m_inputReady = false;
+    int m_captureFrameWidth = 0;
+    int m_captureFrameHeight = 0;
+
+    AppSettings m_settings;
+    InputDevice m_input;
+    VisionService m_vision;
+    FishingFlowController m_fishing;
+    ReelController m_reel;
     QProcess m_inputProcess;
-    QTimer m_fishingEventResetTimer;
-    QTimer m_hookActionTimer;
-    QTimer m_manualResultScreenTimer;
-    QTimer m_resultCloseTimer;
-    QTimer m_recastTimer;
     QTimer m_reelControlTimer;
 };

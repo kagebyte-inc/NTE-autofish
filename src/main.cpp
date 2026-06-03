@@ -1,4 +1,5 @@
 #include "AppController.h"
+#include "I18nCatalog.h"
 
 #include <QApplication>
 #include <QDir>
@@ -34,7 +35,14 @@ int main(int argc, char *argv[])
     }
 
     AppController controller;
+    I18nCatalog i18n;
+    i18n.setLanguage(controller.uiLanguage());
+    QObject::connect(&controller, &AppController::uiLanguageChanged, &i18n, [&]() {
+        i18n.setLanguage(controller.uiLanguage());
+    });
+
     qmlRegisterSingletonInstance("Autofish", 1, 0, "AppController", &controller);
+    qmlRegisterSingletonInstance("Autofish", 1, 0, "I18n", &i18n);
 
     QQmlApplicationEngine engine;
     QObject::connect(

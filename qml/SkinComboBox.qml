@@ -12,6 +12,7 @@ ComboBox {
     property color accentColor: "#4ed4df"
 
     implicitHeight: 34
+    implicitWidth: Math.max(180, contentItem.implicitWidth + leftPadding + rightPadding + 14)
     leftPadding: 12
     rightPadding: 34
     hoverEnabled: true
