@@ -44,6 +44,9 @@ jobs:
             libxcb-xfixes0 \
             libxcb-xinerama0 \
             libxcb-xkb1 \
+            libxcb1-dev \
+            libxcb-sync-dev \
+            libxcb-util-dev \
             python3 \
             python3-pip
 
