@@ -239,18 +239,20 @@ void AppController::handleVisionLine(const QString &line, bool &frameGeometryChe
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(line.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        if (m_settings.debugMode() && now - m_lastRawEventUiMs >= 1000) {
+        // Always sample raw lines to raw-events.log (if writeLogsToFile) for release diagnostics / post-mortems.
+        // Throttled to ~1/sec to avoid flooding. UI buffer population happens here too (shown only in debug mode).
+        if (now - m_lastRawLogMs >= 1000) {
             appendRawEvent(line);
-            m_lastRawEventUiMs = now;
+            m_lastRawLogMs = now;
         }
         return;
     }
 
-    if (m_settings.debugMode() && now - m_lastRawEventUiMs >= 1000) {
+    if (now - m_lastRawLogMs >= 1000) {
         QJsonObject clean = document.object();
         clean.remove("debug_image");  // don't spam raw log with large b64
         appendRawEvent(QJsonDocument(clean).toJson(QJsonDocument::Compact));
-        m_lastRawEventUiMs = now;
+        m_lastRawLogMs = now;
     }
 
     const QJsonObject root = document.object();

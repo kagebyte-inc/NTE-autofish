@@ -105,7 +105,7 @@
   "settings.capture.change": "Сменить захват…",
   "settings.capture.watchingHint": "Остановите захват перед сменой пути.",
   "settings.advanced": "Дополнительно",
-  "settings.logsHint": "При записи в файл логи пишутся в logs/ рядом с приложением.",
+  "settings.logsHint": "При включении fishing.log и raw-events.log пишутся рядом с бинарём autofish (плюс autofish.log для Qt-сообщений запуска).",
   "reel.stable.caption": "Стандартный PID-контроль катушки.",
   "reel.chizukuo.caption": "Импульсы в стиле Chizukuo PID.",
   "reel.experimental.caption": "Режим VSH guard с настройкой импульсов.",

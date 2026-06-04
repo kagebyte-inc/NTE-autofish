@@ -74,6 +74,21 @@ On Arch:
 sudo pacman -S qt6-base qt6-declarative qt6-wayland libxkbcommon libglvnd
 ```
 
+**Troubleshooting:** The binary creates these logs **right next to itself** (same folder as the `autofish` executable, default on):
+
+- `autofish.log` — Qt startup info + all Qt messages (versions, glibc, platform, missing plugins, QML errors etc.). Always created.
+- `fishing.log` — high-level events.
+- `raw-events.log` — low-level vision data.
+
+If the binary refuses to start, run from terminal:
+```sh
+cd <extracted-folder>
+./autofish 2>&1 | tee autofish-console.log
+```
+Attach the *.log files + `ldd ./autofish | head -20` when reporting.
+
+This helps a lot to diagnose why release builds don't run (most common after Arch CI: glibc/Qt runtime mismatch on target system).
+
 See the pipeline definition in [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Run vision service

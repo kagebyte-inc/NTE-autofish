@@ -104,12 +104,9 @@ void AppController::appendLineToLogFile(const QString &fileName, const QString &
         return;
     }
 
-    QDir logsDir(repoRoot());
-    if (!logsDir.mkpath(QStringLiteral("logs"))) {
-        return;
-    }
-
-    QFile file(logsDir.filePath(QStringLiteral("logs/%1").arg(fileName)));
+    // Write directly next to the binary (fishing.log, raw-events.log) for easy access in releases.
+    QDir logDir(repoRoot());
+    QFile file(logDir.filePath(fileName));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         return;
     }

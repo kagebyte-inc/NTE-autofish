@@ -105,7 +105,7 @@
   "settings.capture.change": "Change capture…",
   "settings.capture.watchingHint": "Stop capture before changing the capture path.",
   "settings.advanced": "Advanced",
-  "settings.logsHint": "Logs are written under logs/ in the app folder when file logging is enabled.",
+  "settings.logsHint": "When enabled, fishing.log and raw-events.log are written next to the autofish binary (plus autofish.log for Qt startup messages).",
   "reel.stable.caption": "Default PID-style reel control.",
   "reel.chizukuo.caption": "Chizukuo-style PID pulses.",
   "reel.experimental.caption": "VSH guard mode with tunable pulses.",

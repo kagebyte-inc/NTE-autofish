@@ -105,7 +105,7 @@
   "settings.capture.change": "更改采集…",
   "settings.capture.watchingHint": "更改采集路径前请先停止采集。",
   "settings.advanced": "高级",
-  "settings.logsHint": "启用文件日志后，日志写入应用目录下的 logs/。",
+  "settings.logsHint": "启用后，fishing.log 和 raw-events.log 写入 autofish 二进制旁（Qt 启动日志为 autofish.log）。",
   "reel.stable.caption": "默认 PID 型收线控制。",
   "reel.chizukuo.caption": "Chizukuo 风格 PID 脉冲。",
   "reel.experimental.caption": "VSH 守护模式，可调脉冲。",

@@ -225,7 +225,7 @@ private:
     QString m_reelControl = QStringLiteral("No reel control yet");
     QString m_inputStdoutBuffer;
 
-    qint64 m_lastRawEventUiMs = 0;
+    qint64 m_lastRawLogMs = 0;
     qint64 m_lastReelControlUiMs = 0;
     bool m_inputReady = false;
     int m_captureFrameWidth = 0;

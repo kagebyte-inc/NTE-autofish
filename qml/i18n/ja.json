@@ -105,7 +105,7 @@
   "settings.capture.change": "キャプチャを変更…",
   "settings.capture.watchingHint": "キャプチャ経路を変更する前にキャプチャを停止してください。",
   "settings.advanced": "詳細",
-  "settings.logsHint": "ファイルログ有効時、logs/ に保存されます。",
+  "settings.logsHint": "有効時、fishing.log と raw-events.log が autofish バイナリ横に書き込まれます（Qt 起動ログは autofish.log）。",
   "reel.stable.caption": "既定の PID 型リール制御。",
   "reel.chizukuo.caption": "Chizukuo 風 PID パルス。",
   "reel.experimental.caption": "VSH ガード＋調整可能パルス。",

@@ -37,7 +37,7 @@ void AppSettings::load()
         m_uiLanguage = QStringLiteral("en");
     }
     m_saveDebugFrames = settings.value(QStringLiteral("ui/saveDebugFrames"), false).toBool();
-    m_writeLogsToFile = settings.value(QStringLiteral("ui/writeLogsToFile"), false).toBool();
+    m_writeLogsToFile = settings.value(QStringLiteral("ui/writeLogsToFile"), true).toBool();
     m_reelControlMode = static_cast<ReelControlMode>(
         qBound(static_cast<int>(ReelControlMode::Experimental),
                settings.value(QStringLiteral("ui/reelControlMode"), static_cast<int>(ReelControlMode::Experimental)).toInt(),

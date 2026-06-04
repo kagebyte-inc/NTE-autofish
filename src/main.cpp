@@ -10,8 +10,76 @@
 #include <QStandardPaths>
 #include <QtQml>
 
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+
+#ifdef Q_OS_LINUX
+#include <gnu/libc-version.h>
+#endif
+
+// Early file logging next to the executable (very useful for released builds that "don't start")
+static QFile gLogFile;
+static QTextStream gLogStream;
+
+void autofishMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
+    QString typeStr;
+    switch (type) {
+    case QtDebugMsg:   typeStr = "DEBUG"; break;
+    case QtInfoMsg:    typeStr = "INFO "; break;
+    case QtWarningMsg: typeStr = "WARN "; break;
+    case QtCriticalMsg:typeStr = "CRIT "; break;
+    case QtFatalMsg:   typeStr = "FATAL"; break;
+    default:           typeStr = "???? "; break;
+    }
+
+    QString fileInfo = context.file ? QString("%1:%2").arg(context.file).arg(context.line) : QString("?");
+    QString logLine = QString("[%1] [%2] %3 (%4)")
+                          .arg(timestamp, typeStr, msg, fileInfo);
+
+    if (gLogFile.isOpen()) {
+        gLogStream << logLine << Qt::endl;
+        gLogStream.flush();
+    }
+    // Also to stderr so it appears in terminal too
+    fprintf(stderr, "%s\n", qPrintable(logLine));
+
+    if (type == QtFatalMsg) {
+        abort();
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    // === VERY EARLY LOGGING SETUP (before any Qt init that can fail) ===
+    QString exePath = (argc > 0) ? QString::fromLocal8Bit(argv[0]) : QString();
+    QFileInfo exeInfo(exePath);
+    QString logPath = exeInfo.absolutePath().isEmpty()
+                          ? QStringLiteral("autofish.log")
+                          : exeInfo.absolutePath() + QStringLiteral("/autofish.log");
+
+    gLogFile.setFileName(logPath);
+    if (gLogFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        gLogStream.setDevice(&gLogFile);
+        gLogStream << "\n========== Autofish started " << QDateTime::currentDateTime().toString(Qt::ISODate) << " ==========\n";
+        gLogStream.flush();
+    }
+
+    qInstallMessageHandler(autofishMessageHandler);
+
+    qInfo() << "Exe path:" << exePath;
+    qInfo() << "Log file:" << logPath;
+    qInfo() << "Qt runtime version:" << qVersion();
+#ifdef AUTOFISH_VERSION
+    qInfo() << "App version:" << AUTOFISH_VERSION;
+#endif
+
+#ifdef Q_OS_LINUX
+    qInfo() << "glibc version:" << gnu_get_libc_version();
+#endif
+
     QQuickStyle::setStyle("Fusion");
 
     QApplication app(argc, argv);
@@ -20,19 +88,28 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationVersion(QStringLiteral(AUTOFISH_VERSION));
 #endif
 
+    qInfo() << "Platform name:" << QGuiApplication::platformName();
+    qInfo() << "Library paths:" << QCoreApplication::libraryPaths();
+    qInfo() << "Style:" << QQuickStyle::name();
+
     QString lockDir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
     if (lockDir.isEmpty()) {
         lockDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     }
     QDir().mkpath(lockDir);
 
-    QLockFile lockFile(QDir(lockDir).filePath(QStringLiteral("nte-autofish-nxxt.lock")));
+    QString lockFilePath = QDir(lockDir).filePath(QStringLiteral("nte-autofish-nxxt.lock"));
+    qInfo() << "Using lock file:" << lockFilePath;
+
+    QLockFile lockFile(lockFilePath);
     if (!lockFile.tryLock(100)) {
+        qWarning() << "Another instance is running (lock failed)";
         QMessageBox::information(nullptr,
                                  QStringLiteral("NTE Autofish NXXT"),
                                  QStringLiteral("NTE Autofish NXXT is already running."));
         return 0;
     }
+    qInfo() << "Lock acquired successfully";
 
     AppController controller;
     I18nCatalog i18n;
@@ -51,7 +128,17 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
+
+    qInfo() << "Loading QML module Autofish.Main ...";
     engine.loadFromModule("Autofish", "Main");
 
-    return app.exec();
+    if (engine.rootObjects().isEmpty()) {
+        qCritical() << "Failed to load main QML - no root objects. Check qml/Main.qml and resources.";
+    } else {
+        qInfo() << "QML loaded successfully, root objects:" << engine.rootObjects().size();
+    }
+
+    int ret = app.exec();
+    qInfo() << "Application exited with code" << ret;
+    return ret;
 }
