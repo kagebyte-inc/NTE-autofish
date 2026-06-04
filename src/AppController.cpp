@@ -256,6 +256,21 @@ void AppController::handleVisionLine(const QString &line, bool &frameGeometryChe
     }
 
     const QJsonObject root = document.object();
+
+    // Surface vision service error events (e.g. portal/capture failures on "Start") to UI + logs.
+    // The full json is already sampled to raw-events.log above.
+    const QString evt = root.value(QStringLiteral("event")).toString();
+    if (evt == QStringLiteral("portal_unavailable") ||
+        evt == QStringLiteral("capture_unavailable") ||
+        evt == QStringLiteral("window_not_found") ||
+        evt == QStringLiteral("window_list_error") ||
+        evt == QStringLiteral("input_send_error")) {
+        const QString err = root.value(QStringLiteral("details")).toObject().value(QStringLiteral("error")).toString();
+        const QString msg = err.isEmpty() ? evt : evt + QStringLiteral(": ") + err;
+        setLastEvent(msg);
+        setStatus(QStringLiteral("error"));
+        // appendFishingLog will be called from setLastEvent because msg contains "unavailable"/"error"
+    }
     if (!frameGeometryChecked) {
         const QJsonObject frame = root.value(QStringLiteral("details")).toObject().value(QStringLiteral("frame")).toObject();
         const int width = frame.value(QStringLiteral("width")).toInt();
@@ -306,7 +321,13 @@ void AppController::handleVisionLine(const QString &line, bool &frameGeometryChe
 void AppController::onVisionStopped(int exitCode)
 {
     setStatus(exitCode == 0 ? QStringLiteral("idle") : QStringLiteral("error"));
-    setLastEvent(QStringLiteral("Vision service stopped"));
+    const QString stopMsg = (exitCode == 0)
+        ? QStringLiteral("Vision service stopped")
+        : QStringLiteral("Vision service stopped with error (code %1)").arg(exitCode);
+    setLastEvent(stopMsg);
+    if (exitCode != 0) {
+        appendFishingLog(stopMsg);
+    }
     setReelDirection(0);
     m_fishing.onVisionStopped();
     m_reel.resetSession();
@@ -411,6 +432,7 @@ void AppController::onInputErrorOutput()
 {
     const QString output = QString::fromUtf8(m_inputProcess.readAllStandardError()).trimmed();
     if (!output.isEmpty()) {
+        qWarning() << "input stderr:" << output;
         setLastEvent(output);
     }
 }

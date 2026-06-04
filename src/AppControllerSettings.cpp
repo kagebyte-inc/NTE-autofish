@@ -73,6 +73,19 @@ void AppController::setLastEvent(const QString &event)
     }
     m_lastEvent = event;
     emit lastEventChanged();
+
+    // For release diagnostics: surface error-like last events (e.g. from vision "Start" failures,
+    // portal/capture errors, uinput fails) to autofish.log (always, via qWarning) and fishing.log (if enabled).
+    const bool looksLikeError = event.contains(QStringLiteral("error"), Qt::CaseInsensitive)
+                             || event.contains(QStringLiteral("fail"), Qt::CaseInsensitive)
+                             || event.contains(QStringLiteral("unavailable"), Qt::CaseInsensitive)
+                             || event.contains(QStringLiteral("rejected"), Qt::CaseInsensitive)
+                             || event.contains(QStringLiteral("timeout"), Qt::CaseInsensitive)
+                             || event.contains(QStringLiteral("stopped with"), Qt::CaseInsensitive);
+    if (looksLikeError) {
+        qWarning() << "LastEvent (error):" << event;
+        appendFishingLog(event);
+    }
 }
 
 void AppController::appendRawEvent(const QString &event)

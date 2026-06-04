@@ -22,6 +22,7 @@ VisionService::VisionService(AppController *controller, QObject *parent)
     connect(&m_visionProcess, &QProcess::readyReadStandardError, this, [this]() {
         const QString output = QString::fromUtf8(m_visionProcess.readAllStandardError()).trimmed();
         if (!output.isEmpty()) {
+            qWarning() << "vision stderr:" << output;  // ensures python tracebacks/warnings/errors go to autofish.log (always) + stderr
             emit statusMessage(output);
         }
     });
@@ -142,7 +143,9 @@ void VisionService::startWatch()
     m_visionProcess.start(m_controller->pythonExecutable(), watchArguments());
 
     if (!m_visionProcess.waitForStarted(1500)) {
-        emit statusMessage(QStringLiteral("Failed to start vision service"));
+        const QString msg = QStringLiteral("Failed to start vision service");
+        qWarning() << msg;
+        emit statusMessage(msg);
         return;
     }
 
@@ -176,7 +179,9 @@ void VisionService::startPortal()
     m_visionProcess.start(m_controller->pythonExecutable(), arguments);
 
     if (!m_visionProcess.waitForStarted(1500)) {
-        emit statusMessage(QStringLiteral("Failed to start portal vision service"));
+        const QString msg = QStringLiteral("Failed to start portal vision service");
+        qWarning() << msg;
+        emit statusMessage(msg);
         return;
     }
 
