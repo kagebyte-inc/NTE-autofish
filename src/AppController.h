@@ -168,6 +168,8 @@ public:
     QString pythonExecutable() const;
     QProcessEnvironment pythonEnvironment() const;
 
+    bool validateVisionPython(QString *errorMessage = nullptr) const;
+
     void prepareVisionSession();
     void handleVisionLine(const QString &line, bool &frameGeometryChecked);
     void onVisionStopped(int exitCode);

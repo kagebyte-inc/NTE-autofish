@@ -174,6 +174,17 @@ void AppController::selectWindow(int index) { m_vision.selectWindow(index); }
 
 void AppController::startCapture()
 {
+    QString pyErr;
+    if (!validateVisionPython(&pyErr)) {
+        setStatus(QStringLiteral("error"));
+        const QString msg = QStringLiteral("Vision Python setup required (cv2 etc. missing): %1. "
+                                           "In the folder containing the 'autofish' binary, run once: "
+                                           "python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt").arg(pyErr);
+        setLastEvent(msg);
+        appendFishingLog(QStringLiteral("vision python check failed: %1").arg(pyErr));
+        return;
+    }
+
     const QString backend = m_settings.captureBackend();
     if (m_settings.platform() == QStringLiteral("Wayland") || backend == QStringLiteral("PipeWire Portal")) {
         startPortalVision();
@@ -413,6 +424,36 @@ QProcessEnvironment AppController::pythonEnvironment() const
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     env.insert(QStringLiteral("PYTHONPATH"), QDir(repoRoot()).absoluteFilePath(QStringLiteral("python")));
     return env;
+}
+
+bool AppController::validateVisionPython(QString *errorMessage) const
+{
+    const QString py = pythonExecutable();
+    if (!QFileInfo::exists(py)) {
+        if (errorMessage) *errorMessage = QStringLiteral("Python executable not found: %1").arg(py);
+        return false;
+    }
+
+    QProcess proc;
+    proc.setProcessEnvironment(pythonEnvironment());
+    proc.start(py, {QStringLiteral("-c"), QStringLiteral("import cv2; print('cv2 available')")});
+
+    if (!proc.waitForStarted(2000)) {
+        if (errorMessage) *errorMessage = QStringLiteral("Failed to start Python: %1").arg(py);
+        return false;
+    }
+    if (!proc.waitForFinished(5000)) {
+        proc.kill();
+        if (errorMessage) *errorMessage = QStringLiteral("Python check timed out");
+        return false;
+    }
+
+    if (proc.exitCode() != 0) {
+        const QString out = QString::fromUtf8(proc.readAllStandardOutput() + proc.readAllStandardError()).trimmed();
+        if (errorMessage) *errorMessage = out.isEmpty() ? QStringLiteral("cv2 import failed (no details)") : out;
+        return false;
+    }
+    return true;
 }
 
 void AppController::onInputOutput()
