@@ -59,7 +59,7 @@ jobs:
           arch: 'gcc_64'
           modules: 'qtdeclarative qtquickcontrols2'
           cache: true
-          cache-key-prefix: 'qt-6.5'
+          cache-key-prefix: 'qt-6.5-full'
 
       - name: Configure
         run: |
