@@ -63,6 +63,7 @@ jobs:
 
       - name: Configure
         run: |
+          echo "QT_ROOT_DIR=$QT_ROOT_DIR"
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -G Ninja
