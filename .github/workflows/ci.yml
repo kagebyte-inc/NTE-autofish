@@ -66,7 +66,8 @@ jobs:
           echo "QT_ROOT_DIR=$QT_ROOT_DIR"
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -G Ninja
+            -G Ninja \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR/6.5.3/gcc_64"
 
       - name: Build
         run: cmake --build build --target autofish -j$(nproc)
