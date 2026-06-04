@@ -48,7 +48,9 @@ mkdir -p ~/opt/nte-autofish
 cd ~/opt/nte-autofish
 tar -xzf ~/Downloads/NTE-autofish-vX.Y.Z-linux-x86_64.tar.gz
 
-# one-time Python deps setup (recommended: isolated venv)
+# Python deps for vision service
+# On first launch the app will automatically create .venv and run pip install -r requirements.txt (one-time, needs internet).
+# You can also do it manually before first run:
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
