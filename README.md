@@ -30,14 +30,14 @@ cmake --build build
 
 ## Prebuilt releases (GitHub Actions)
 
-Linux x86_64 builds are produced automatically by GitHub Actions on every push/PR and on every `v*` tag.
+Linux x86_64 builds are produced automatically by GitHub Actions on every push/PR and on every `v*` tag (build job runs inside an `archlinux:base-devel` container for fresh packages).
 
 - Artifacts from CI runs are available on the [Actions tab](https://github.com/kagebyte-inc/NTE-autofish/actions).
 - On tag push (e.g. `git tag v0.2.2 && git push origin v0.2.2`), a full release is created with a tarball attached. See [Releases](https://github.com/kagebyte-inc/NTE-autofish/releases).
 
 The release tarball layout matches the `build/dist/` staging:
 
-- `autofish` — statically-linked? no, dynamically linked Qt6 binary (requires Qt6 runtime on the target system)
+- `autofish` — dynamically linked Qt6 binary (requires a reasonably recent Qt6 runtime on the target system; built against current Arch Qt6)
 - `python/autofish_vision/` + `requirements.txt`
 
 ### Using a prebuilt release
@@ -60,10 +60,18 @@ deactivate
 
 If you already have the required packages globally available for your `python3`, you can skip the venv step — the binary falls back to `python3` from PATH (with `PYTHONPATH` set to include the local `python/`).
 
-**Runtime dependencies on Linux (for prebuilts):** Qt 6 (base + declarative + wayland), libxkbcommon, OpenGL libs. Example on Ubuntu:
+**Runtime dependencies on Linux (for prebuilts):** reasonably recent Qt 6 (base + declarative + wayland recommended), libxkbcommon, OpenGL libs.
+
+Example on Ubuntu (may need newer backports or newer release for full 6.x features):
 
 ```sh
 sudo apt install qt6-base qt6-declarative qt6-wayland libxkbcommon0 libgl1-mesa-glx
+```
+
+On Arch:
+
+```sh
+sudo pacman -S qt6-base qt6-declarative qt6-wayland libxkbcommon libglvnd
 ```
 
 See the pipeline definition in [.github/workflows/ci.yml](.github/workflows/ci.yml).
