@@ -57,6 +57,8 @@ jobs:
           host: 'linux'
           target: 'desktop'
           arch: 'gcc_64'
+          cache: true
+          cache-key-prefix: 'qt-6.5'
 
       - name: Configure
         run: |
