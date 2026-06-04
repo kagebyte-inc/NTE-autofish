@@ -60,6 +60,9 @@ AppController::AppController(QObject *parent)
 
     m_reelControlTimer.start();
     refreshDiagnostics();
+
+    // Kick off automatic Python venv + deps setup early on app start (before any Start click)
+    ensureVisionPythonEnvironment();
 }
 
 AppController::~AppController()
@@ -81,6 +84,9 @@ QString AppController::rawEvents() const { return m_rawEvents; }
 QString AppController::fishingEvent() const { return m_fishingEvent; }
 QString AppController::fishingLog() const { return m_fishingLog; }
 QString AppController::reelControl() const { return m_reelControl; }
+
+bool AppController::pythonSetupInProgress() const { return m_pythonSetupInProgress; }
+QString AppController::pythonSetupMessage() const { return m_pythonSetupMessage; }
 
 bool AppController::usePidReelControl() const
 {
@@ -454,6 +460,151 @@ bool AppController::validateVisionPython(QString *errorMessage) const
         return false;
     }
     return true;
+}
+
+void AppController::ensureVisionPythonEnvironment()
+{
+    if (m_pythonSetupInProgress) {
+        return;
+    }
+    // If we already have a working venv or validated env, do nothing
+    if (m_pythonEnvReady) {
+        return;
+    }
+
+    const QString rootPath = repoRoot();
+    const QDir root(rootPath);
+    const QString venvPython = root.absoluteFilePath(QStringLiteral(".venv/bin/python"));
+
+    if (QFileInfo::exists(venvPython)) {
+        QString err;
+        if (validateVisionPython(&err)) {
+            m_pythonEnvReady = true;
+            m_pythonSetupMessage = QStringLiteral("Vision Python environment ready");
+            emit pythonSetupMessageChanged();
+            setLastEvent(m_pythonSetupMessage);
+            return;
+        }
+        // venv exists but cv2 broken — we'll try to fix by reinstalling
+        m_pythonSetupMessage = QStringLiteral("Repairing Python vision environment...");
+    } else {
+        m_pythonSetupMessage = QStringLiteral("Setting up Python environment for vision service...");
+    }
+
+    m_pythonSetupInProgress = true;
+    emit pythonSetupInProgressChanged();
+    emit pythonSetupMessageChanged();
+    setLastEvent(m_pythonSetupMessage);
+    appendFishingLog(m_pythonSetupMessage);
+
+    // Start venv creation (idempotent if dir exists, but we check)
+    m_venvCreateProcess.setWorkingDirectory(rootPath);
+    m_venvCreateProcess.setProcessEnvironment(QProcessEnvironment::systemEnvironment());
+
+    connect(&m_venvCreateProcess, &QProcess::finished, this, &AppController::onVenvCreated, Qt::UniqueConnection);
+    connect(&m_venvCreateProcess, &QProcess::readyReadStandardError, this, [this]() {
+        const QString err = QString::fromUtf8(m_venvCreateProcess.readAllStandardError()).trimmed();
+        if (!err.isEmpty()) {
+            qWarning() << "venv create stderr:" << err;
+        }
+    });
+    connect(&m_venvCreateProcess, &QProcess::readyReadStandardOutput, this, [this]() {
+        const QString out = QString::fromUtf8(m_venvCreateProcess.readAllStandardOutput()).trimmed();
+        if (!out.isEmpty()) {
+            qInfo() << "venv create:" << out;
+        }
+    });
+
+    // Always (re)create to be safe, or check if dir exists
+    if (QDir(root.absoluteFilePath(".venv")).exists()) {
+        // Skip create, go straight to pip repair
+        onVenvCreated(0);
+    } else {
+        m_venvCreateProcess.start(QStringLiteral("python3"), {QStringLiteral("-m"), QStringLiteral("venv"), QStringLiteral(".venv")});
+        if (!m_venvCreateProcess.waitForStarted(3000)) {
+            onVenvSetupFailed("Failed to start python3 -m venv");
+        }
+    }
+}
+
+void AppController::onVenvCreated(int exitCode)
+{
+    if (exitCode != 0) {
+        onVenvSetupFailed("Failed to create .venv directory");
+        return;
+    }
+
+    // Now install requirements using the venv's pip
+    const QDir root(repoRoot());
+    const QString pipPath = root.absoluteFilePath(QStringLiteral(".venv/bin/pip"));
+    const QString reqPath = root.absoluteFilePath(QStringLiteral("requirements.txt"));
+
+    m_pipInstallProcess.setWorkingDirectory(root.absolutePath());
+    m_pipInstallProcess.setProcessEnvironment(QProcessEnvironment::systemEnvironment());
+
+    connect(&m_pipInstallProcess, &QProcess::finished, this, &AppController::onPipInstalled, Qt::UniqueConnection);
+    connect(&m_pipInstallProcess, &QProcess::readyReadStandardOutput, this, [this]() {
+        QString line = QString::fromUtf8(m_pipInstallProcess.readAllStandardOutput()).trimmed();
+        if (!line.isEmpty()) {
+            qInfo() << "pip:" << line;
+            // Update message with last line for UI feedback (e.g. "Collecting opencv-python...")
+            if (line.length() > 10) {
+                m_pythonSetupMessage = QStringLiteral("pip: %1").arg(line.left(80));
+                emit pythonSetupMessageChanged();
+            }
+        }
+    });
+    connect(&m_pipInstallProcess, &QProcess::readyReadStandardError, this, [this]() {
+        const QString err = QString::fromUtf8(m_pipInstallProcess.readAllStandardError()).trimmed();
+        if (!err.isEmpty()) {
+            qWarning() << "pip stderr:" << err;
+        }
+    });
+
+    m_pythonSetupMessage = QStringLiteral("Installing OpenCV and other vision packages (one-time, may take 30-90s)...");
+    emit pythonSetupMessageChanged();
+    setLastEvent(m_pythonSetupMessage);
+
+    m_pipInstallProcess.start(pipPath, {QStringLiteral("install"), QStringLiteral("-r"), reqPath, QStringLiteral("--disable-pip-version-check"), QStringLiteral("--no-input")});
+
+    if (!m_pipInstallProcess.waitForStarted(5000)) {
+        onVenvSetupFailed("Failed to start pip install");
+    }
+}
+
+void AppController::onPipInstalled(int exitCode)
+{
+    m_pythonSetupInProgress = false;
+    emit pythonSetupInProgressChanged();
+
+    if (exitCode == 0) {
+        m_pythonEnvReady = true;
+        m_pythonSetupMessage = QStringLiteral("Vision Python environment ready (venv + deps installed)");
+        emit pythonSetupMessageChanged();
+        setLastEvent(m_pythonSetupMessage);
+        appendFishingLog(m_pythonSetupMessage);
+
+        // Re-validate just in case
+        QString dummy;
+        validateVisionPython(&dummy);
+    } else {
+        onVenvSetupFailed("pip install failed (see autofish.log for details). You may need internet access.");
+    }
+}
+
+void AppController::onVenvSetupFailed(const QString &reason)
+{
+    m_pythonSetupInProgress = false;
+    emit pythonSetupInProgressChanged();
+
+    m_pythonSetupMessage = QStringLiteral("Python vision setup failed: %1. See autofish.log. Manual: python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt").arg(reason);
+    emit pythonSetupMessageChanged();
+
+    setLastEvent(m_pythonSetupMessage);
+    appendFishingLog(m_pythonSetupMessage);
+    qWarning() << "Vision venv setup failed:" << reason;
+
+    // Leave m_pythonEnvReady false so validate will keep warning on Start
 }
 
 void AppController::onInputOutput()

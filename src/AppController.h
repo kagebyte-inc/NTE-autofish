@@ -170,6 +170,14 @@ public:
 
     bool validateVisionPython(QString *errorMessage = nullptr) const;
 
+    Q_PROPERTY(bool pythonSetupInProgress READ pythonSetupInProgress NOTIFY pythonSetupInProgressChanged)
+    Q_PROPERTY(QString pythonSetupMessage READ pythonSetupMessage NOTIFY pythonSetupMessageChanged)
+
+    bool pythonSetupInProgress() const;
+    QString pythonSetupMessage() const;
+
+    void ensureVisionPythonEnvironment();
+
     void prepareVisionSession();
     void handleVisionLine(const QString &line, bool &frameGeometryChecked);
     void onVisionStopped(int exitCode);
@@ -206,6 +214,9 @@ signals:
     void fishingTuningChanged();
     void windowsChanged();
     void selectedWindowChanged();
+
+    void pythonSetupInProgressChanged();
+    void pythonSetupMessageChanged();
     void uiLanguageChanged();
     void inputReadyChanged();
     void captureFrameSizeChanged();
@@ -216,6 +227,9 @@ private slots:
     void onInputOutput();
     void onInputErrorOutput();
     void onInputFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void onVenvCreated(int exitCode);
+    void onPipInstalled(int exitCode);
+    void onVenvSetupFailed(const QString &reason);
 private:
     QString m_status = QStringLiteral("idle");
     QString m_lastEvent = QStringLiteral("No events yet");
@@ -244,4 +258,11 @@ private:
     ReelController m_reel;
     QProcess m_inputProcess;
     QTimer m_reelControlTimer;
+
+    // Automatic vision venv setup on startup
+    QProcess m_venvCreateProcess;
+    QProcess m_pipInstallProcess;
+    bool m_pythonSetupInProgress = false;
+    QString m_pythonSetupMessage;
+    bool m_pythonEnvReady = false;
 };

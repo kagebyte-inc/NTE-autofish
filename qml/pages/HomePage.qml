@@ -67,6 +67,14 @@ RowLayout {
 
                 SectionTitle { text: Theme.t("fishingControls") }
 
+                SmallCaption {
+                    visible: AppController.pythonSetupInProgress || AppController.pythonSetupMessage.length > 0
+                    text: AppController.pythonSetupMessage
+                    color: AppController.pythonSetupInProgress ? Theme.warning : Theme.muted
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
@@ -74,7 +82,7 @@ RowLayout {
                     GlassButton {
                         text: Theme.t("start")
                         variant: "primary"
-                        enabled: AppController.status !== "watching"
+                        enabled: AppController.status !== "watching" && !AppController.pythonSetupInProgress
                         onClicked: AppController.startCapture()
                     }
 
