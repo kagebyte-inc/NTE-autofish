@@ -84,7 +84,7 @@ void AppController::setLastEvent(const QString &event)
                              || event.contains(QStringLiteral("stopped with"), Qt::CaseInsensitive);
     if (looksLikeError) {
         qWarning() << "LastEvent (error):" << event;
-        appendFishingLog(event);
+        appendFishingLogOnce(event);
     }
 }
 
@@ -155,6 +155,15 @@ void AppController::appendFishingLog(const QString &event)
 
     m_fishingLog = fishingLog;
     emit fishingLogChanged();
+}
+
+void AppController::appendFishingLogOnce(const QString &event)
+{
+    const QString previous = m_fishingLogLines.isEmpty() ? QString() : m_fishingLogLines.constLast();
+    if (previous.endsWith(QStringLiteral("  %1").arg(event))) {
+        return;
+    }
+    appendFishingLog(event);
 }
 
 void AppController::setReelControl(const QString &event)

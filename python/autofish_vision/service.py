@@ -85,9 +85,10 @@ def run_watch(
     debug_dir: str,
     debug_every: int,
     live_debug: bool = False,
+    live_debug_every: int = 20,
 ) -> int:
     if portal:
-        return run_portal_watch(interval_seconds, debug_dir, debug_every, live_debug)
+        return run_portal_watch(interval_seconds, debug_dir, debug_every, live_debug, live_debug_every)
 
     detector = BiteDetector()
     analyzer = WindowElementAnalyzer()
@@ -147,7 +148,7 @@ def run_watch(
                 "frame": {"width": int(frame.shape[1]), "height": int(frame.shape[0])},
             },
         }
-        if live_debug:
+        if live_debug and live_debug_every > 0 and frame_index % live_debug_every == 0:
             b64 = make_live_debug_image_b64(frame, elements)
             if b64:
                 event["debug_image"] = b64
@@ -155,7 +156,13 @@ def run_watch(
         time.sleep(interval_seconds)
 
 
-def run_portal_watch(interval_seconds: float, debug_dir: str, debug_every: int, live_debug: bool = False) -> int:
+def run_portal_watch(
+    interval_seconds: float,
+    debug_dir: str,
+    debug_every: int,
+    live_debug: bool = False,
+    live_debug_every: int = 20,
+) -> int:
     detector = BiteDetector()
     analyzer = WindowElementAnalyzer()
     emit({"event": "portal_picker_opening", "confidence": 1.0, "details": {}})
@@ -199,7 +206,7 @@ def run_portal_watch(interval_seconds: float, debug_dir: str, debug_every: int, 
                     "frame": {"width": int(frame.shape[1]), "height": int(frame.shape[0])},
                 },
             }
-            if live_debug:
+            if live_debug and live_debug_every > 0 and frame_index % live_debug_every == 0:
                 b64 = make_live_debug_image_b64(frame, elements)
                 if b64:
                     event["debug_image"] = b64
@@ -313,6 +320,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--debug-dir", default="", help="Write frames with detector overlays to this directory.")
     parser.add_argument("--debug-every", type=int, default=5, help="Save every Nth analyzed frame when --debug-dir is set.")
     parser.add_argument("--live-debug", action="store_true", help="Include small base64 debug image in JSON events for live UI preview.")
+    parser.add_argument("--live-debug-every", type=int, default=20, help="Include live debug image every Nth analyzed frame.")
     return parser.parse_args(argv)
 
 
@@ -339,6 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         args.debug_dir,
         args.debug_every,
         getattr(args, "live_debug", False),
+        args.live_debug_every,
     )
 
 

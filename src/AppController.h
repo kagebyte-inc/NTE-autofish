@@ -62,6 +62,8 @@ class AppController final : public QObject
     Q_PROPERTY(bool inputReady READ inputReady NOTIFY inputReadyChanged)
     Q_PROPERTY(QString captureFrameSize READ captureFrameSize NOTIFY captureFrameSizeChanged)
     Q_PROPERTY(QString debugOverlaySource READ debugOverlaySource NOTIFY debugOverlaySourceChanged)
+    Q_PROPERTY(bool pythonSetupInProgress READ pythonSetupInProgress NOTIFY pythonSetupInProgressChanged)
+    Q_PROPERTY(QString pythonSetupMessage READ pythonSetupMessage NOTIFY pythonSetupMessageChanged)
 
 public:
     using ReelControlMode = AppSettings::ReelControlMode;
@@ -170,9 +172,6 @@ public:
 
     bool validateVisionPython(QString *errorMessage = nullptr) const;
 
-    Q_PROPERTY(bool pythonSetupInProgress READ pythonSetupInProgress NOTIFY pythonSetupInProgressChanged)
-    Q_PROPERTY(QString pythonSetupMessage READ pythonSetupMessage NOTIFY pythonSetupMessageChanged)
-
     bool pythonSetupInProgress() const;
     QString pythonSetupMessage() const;
 
@@ -194,6 +193,7 @@ public:
     void setReelDirection(int direction);
     void sendKeyTap(int keyCode);
     void resetReelControllerState();
+    void appendFishingLogOnce(const QString &event);
 
 signals:
     void statusChanged();
@@ -250,6 +250,7 @@ private:
     QImage m_debugOverlayImage;
     QString m_debugOverlaySource;
     int m_debugOverlayVersion = 0;
+    qint64 m_lastDebugOverlayUpdateMs = 0;
 
     AppSettings m_settings;
     InputDevice m_input;

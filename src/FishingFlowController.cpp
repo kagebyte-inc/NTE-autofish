@@ -70,15 +70,15 @@ void FishingFlowController::enterReeling()
 void FishingFlowController::sendHookAction()
 {
     if (!m_app->input()->ensureOpen()) {
-        m_app->setLastEvent(QStringLiteral("Failed to initialize /dev/uinput for F"));
-        m_app->appendFishingLog(QStringLiteral("hook F failed: /dev/uinput unavailable"));
+        m_app->setLastEvent(QStringLiteral("Failed to initialize input backend for F: %1").arg(m_app->input()->lastError()));
+        m_app->appendFishingLog(QStringLiteral("hook F failed: input backend unavailable"));
         return;
     }
 
     m_lastHookFiredMs = QDateTime::currentMSecsSinceEpoch();
     m_app->sendKeyTap(KEY_F);
     transitionState(State::AwaitingReel, QStringLiteral("hook F sent"));
-    m_app->setLastEvent(QStringLiteral("Sent F through uinput"));
+    m_app->setLastEvent(QStringLiteral("Sent F through %1").arg(m_app->input()->backendName()));
     m_app->appendFishingLog(QStringLiteral("hook F sent"));
 }
 
@@ -111,7 +111,7 @@ void FishingFlowController::triggerResultScreenFlow(const QString &source)
 void FishingFlowController::sendResultCloseAction()
 {
     if (!m_app->input()->ensureOpen()) {
-        m_app->setLastEvent(QStringLiteral("Failed to initialize /dev/uinput for result Esc"));
+        m_app->setLastEvent(QStringLiteral("Failed to initialize input backend for result Esc: %1").arg(m_app->input()->lastError()));
         return;
     }
 
@@ -341,7 +341,7 @@ void FishingFlowController::retryHookActionOrCleanup()
 
     if (m_hookRetryCount < 1 && m_lastHookSeenMs > 0 && now - m_lastHookSeenMs <= hookVisibleGraceMs) {
         if (!m_app->input()->ensureOpen()) {
-            m_app->appendFishingLog(QStringLiteral("hook retry failed: /dev/uinput unavailable"));
+            m_app->appendFishingLog(QStringLiteral("hook retry failed: input backend unavailable"));
             scheduleFOnlyRecovery(QStringLiteral("hook retry failed"));
             return;
         }
@@ -394,8 +394,8 @@ void FishingFlowController::scheduleFOnlyRecovery(const QString &source)
 void FishingFlowController::sendRecastAction()
 {
     if (!m_app->input()->ensureOpen()) {
-        m_app->setLastEvent(QStringLiteral("Failed to initialize /dev/uinput for recast F"));
-        m_app->appendFishingLog(QStringLiteral("recast F failed: /dev/uinput unavailable"));
+        m_app->setLastEvent(QStringLiteral("Failed to initialize input backend for recast F: %1").arg(m_app->input()->lastError()));
+        m_app->appendFishingLog(QStringLiteral("recast F failed: input backend unavailable"));
         return;
     }
 

@@ -21,7 +21,7 @@ GlassCard {
                 Layout.fillWidth: true
             }
             SmallCaption {
-                text: AppController.writeLogsToFile ? "logs/fishing.log, logs/raw-events.log" : ""
+                text: AppController.writeLogsToFile ? "fishing.log, raw-events.log" : ""
                 color: Theme.muted
             }
         }

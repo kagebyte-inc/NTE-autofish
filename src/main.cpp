@@ -3,6 +3,7 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QLockFile>
 #include <QMessageBox>
 #include <QQmlApplicationEngine>
@@ -21,6 +22,18 @@
 // Early file logging next to the executable (very useful for released builds that "don't start")
 static QFile gLogFile;
 static QTextStream gLogStream;
+
+QString executableDirPath(int argc, char *argv[])
+{
+#ifdef Q_OS_LINUX
+    const QString procExe = QFile::symLinkTarget(QStringLiteral("/proc/self/exe"));
+    if (!procExe.isEmpty()) {
+        return QFileInfo(procExe).absolutePath();
+    }
+#endif
+    const QString exePath = (argc > 0) ? QString::fromLocal8Bit(argv[0]) : QString();
+    return QFileInfo(exePath).absolutePath();
+}
 
 void autofishMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
@@ -55,10 +68,10 @@ int main(int argc, char *argv[])
 {
     // === VERY EARLY LOGGING SETUP (before any Qt init that can fail) ===
     QString exePath = (argc > 0) ? QString::fromLocal8Bit(argv[0]) : QString();
-    QFileInfo exeInfo(exePath);
-    QString logPath = exeInfo.absolutePath().isEmpty()
+    const QString exeDir = executableDirPath(argc, argv);
+    QString logPath = exeDir.isEmpty()
                           ? QStringLiteral("autofish.log")
-                          : exeInfo.absolutePath() + QStringLiteral("/autofish.log");
+                          : exeDir + QStringLiteral("/autofish.log");
 
     gLogFile.setFileName(logPath);
     if (gLogFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {

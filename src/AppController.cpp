@@ -323,12 +323,13 @@ void AppController::handleVisionLine(const QString &line, bool &frameGeometryChe
     m_fishing.inspectFishingEvent(root);
     m_reel.ingestFrame(root);
 
-    if (root.contains(QStringLiteral("debug_image"))) {
+    if (root.contains(QStringLiteral("debug_image")) && now - m_lastDebugOverlayUpdateMs >= 150) {
         const QString b64 = root.value(QStringLiteral("debug_image")).toString();
         if (!b64.isEmpty()) {
             const QByteArray data = QByteArray::fromBase64(b64.toUtf8());
             QImage img;
             if (img.loadFromData(data, "PNG")) {
+                m_lastDebugOverlayUpdateMs = now;
                 updateDebugOverlay(img);
             }
         }
@@ -343,7 +344,7 @@ void AppController::onVisionStopped(int exitCode)
         : QStringLiteral("Vision service stopped with error (code %1)").arg(exitCode);
     setLastEvent(stopMsg);
     if (exitCode != 0) {
-        appendFishingLog(stopMsg);
+        appendFishingLogOnce(stopMsg);
     }
     setReelDirection(0);
     m_fishing.onVisionStopped();
@@ -435,8 +436,12 @@ QProcessEnvironment AppController::pythonEnvironment() const
 bool AppController::validateVisionPython(QString *errorMessage) const
 {
     const QString py = pythonExecutable();
-    if (!QFileInfo::exists(py)) {
+    if (py.contains(QLatin1Char('/')) && !QFileInfo::exists(py)) {
         if (errorMessage) *errorMessage = QStringLiteral("Python executable not found: %1").arg(py);
+        return false;
+    }
+    if (!py.contains(QLatin1Char('/')) && QStandardPaths::findExecutable(py).isEmpty()) {
+        if (errorMessage) *errorMessage = QStringLiteral("Python executable not found in PATH: %1").arg(py);
         return false;
     }
 
@@ -474,7 +479,9 @@ void AppController::ensureVisionPythonEnvironment()
 
     const QString rootPath = repoRoot();
     const QDir root(rootPath);
+    const QString venvDir = root.absoluteFilePath(QStringLiteral(".venv"));
     const QString venvPython = root.absoluteFilePath(QStringLiteral(".venv/bin/python"));
+    const QString venvPip = root.absoluteFilePath(QStringLiteral(".venv/bin/pip"));
 
     if (QFileInfo::exists(venvPython)) {
         QString err;
@@ -488,14 +495,16 @@ void AppController::ensureVisionPythonEnvironment()
         // venv exists but cv2 broken — we'll try to fix by reinstalling
         m_pythonSetupMessage = QStringLiteral("Repairing Python vision environment...");
     } else {
-        m_pythonSetupMessage = QStringLiteral("Setting up Python environment for vision service...");
+        m_pythonSetupMessage = QDir(venvDir).exists()
+            ? QStringLiteral("Recreating incomplete Python vision environment...")
+            : QStringLiteral("Setting up Python environment for vision service...");
     }
 
     m_pythonSetupInProgress = true;
     emit pythonSetupInProgressChanged();
     emit pythonSetupMessageChanged();
     setLastEvent(m_pythonSetupMessage);
-    appendFishingLog(m_pythonSetupMessage);
+    appendFishingLogOnce(m_pythonSetupMessage);
 
     // Start venv creation (idempotent if dir exists, but we check)
     m_venvCreateProcess.setWorkingDirectory(rootPath);
@@ -515,12 +524,16 @@ void AppController::ensureVisionPythonEnvironment()
         }
     });
 
-    // Always (re)create to be safe, or check if dir exists
-    if (QDir(root.absoluteFilePath(".venv")).exists()) {
-        // Skip create, go straight to pip repair
+    if (QFileInfo::exists(venvPython) && QFileInfo::exists(venvPip)) {
+        // Existing venv can be repaired by reinstalling requirements.
         onVenvCreated(0);
     } else {
-        m_venvCreateProcess.start(QStringLiteral("python3"), {QStringLiteral("-m"), QStringLiteral("venv"), QStringLiteral(".venv")});
+        QStringList args = {QStringLiteral("-m"), QStringLiteral("venv")};
+        if (QDir(venvDir).exists()) {
+            args << QStringLiteral("--clear");
+        }
+        args << QStringLiteral(".venv");
+        m_venvCreateProcess.start(QStringLiteral("python3"), args);
         if (!m_venvCreateProcess.waitForStarted(3000)) {
             onVenvSetupFailed("Failed to start python3 -m venv");
         }
@@ -538,6 +551,14 @@ void AppController::onVenvCreated(int exitCode)
     const QDir root(repoRoot());
     const QString pipPath = root.absoluteFilePath(QStringLiteral(".venv/bin/pip"));
     const QString reqPath = root.absoluteFilePath(QStringLiteral("requirements.txt"));
+    if (!QFileInfo::exists(pipPath)) {
+        onVenvSetupFailed(QStringLiteral("pip not found in .venv: %1").arg(pipPath));
+        return;
+    }
+    if (!QFileInfo::exists(reqPath)) {
+        onVenvSetupFailed(QStringLiteral("requirements.txt not found: %1").arg(reqPath));
+        return;
+    }
 
     m_pipInstallProcess.setWorkingDirectory(root.absolutePath());
     m_pipInstallProcess.setProcessEnvironment(QProcessEnvironment::systemEnvironment());
@@ -578,15 +599,17 @@ void AppController::onPipInstalled(int exitCode)
     emit pythonSetupInProgressChanged();
 
     if (exitCode == 0) {
+        QString err;
+        if (!validateVisionPython(&err)) {
+            onVenvSetupFailed(QStringLiteral("pip install completed, but Python validation failed: %1").arg(err));
+            return;
+        }
+
         m_pythonEnvReady = true;
         m_pythonSetupMessage = QStringLiteral("Vision Python environment ready (venv + deps installed)");
         emit pythonSetupMessageChanged();
         setLastEvent(m_pythonSetupMessage);
         appendFishingLog(m_pythonSetupMessage);
-
-        // Re-validate just in case
-        QString dummy;
-        validateVisionPython(&dummy);
     } else {
         onVenvSetupFailed("pip install failed (see autofish.log for details). You may need internet access.");
     }
@@ -601,7 +624,7 @@ void AppController::onVenvSetupFailed(const QString &reason)
     emit pythonSetupMessageChanged();
 
     setLastEvent(m_pythonSetupMessage);
-    appendFishingLog(m_pythonSetupMessage);
+    appendFishingLogOnce(m_pythonSetupMessage);
     qWarning() << "Vision venv setup failed:" << reason;
 
     // Leave m_pythonEnvReady false so validate will keep warning on Start
